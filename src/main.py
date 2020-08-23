@@ -22,7 +22,7 @@ class MyStreamListener(tweepy.StreamListener):
         self.batch_size = batch_size
         self.batch = self.get_clean_batch()
 
-    def write_to_postgres(self, data):
+    def write_to_postgres(self):
         try:
             connection = psycopg2.connect(user="happy",
                                           password="hashtags",
@@ -32,13 +32,7 @@ class MyStreamListener(tweepy.StreamListener):
 
             cursor = connection.cursor()
 
-            rows = []
-
-            for hashtag, items in data.items():
-                for hour, count in items.items():
-                    rows.append((hashtag, hour, count))
-
-            logger.info(rows)
+            rows = self.get_rows()
 
             # Print PostgreSQL version
             cursor.executemany(read_query("update_counts.sql", logger),
@@ -56,16 +50,31 @@ class MyStreamListener(tweepy.StreamListener):
                 logger.info("PostgreSQL connection is closed")
 
     def on_status(self, status):
-        # check if text has been truncated
         tweet = Tweet(status)
-        for hashtag in tweet.hashtags:
-            self.batch[hashtag][tweet.created_at_hour] += 1
+        self.update_counts(tweet)
 
         if len(self.batch) > self.batch_size:
             logger.info("Batch:")
             logger.info(self.batch)
-            self.write_to_postgres(self.batch)
+            self.write_to_postgres()
             self.batch = self.get_clean_batch()
+
+    def get_rows(self):
+        """
+        :return: Rows for the current batch
+        """
+        for hashtag, items in self.batch.items():
+            for hour, count in items.items():
+                yield (hashtag, hour, count)
+
+    def update_counts(self, tweet):
+        """
+        Updates the counts of happy hashtags given a tweet
+        :param tweet:
+        :return:
+        """
+        for hashtag in tweet.hashtags:
+            self.batch[hashtag][tweet.created_at_hour] += 1
 
     def on_error(self, status_code):
         logger.info(status_code)
