@@ -8,6 +8,8 @@ from stream_listener import HappyHashtagsStreamListener
 logging.basicConfig(level=read_variable('LOG_LEVEL', logging.INFO))
 logger = logging.getLogger()
 
+HAPPY_HASHTAGS = [':)']
+
 
 def get_api_connection():
     """
@@ -25,7 +27,7 @@ def start_stream_listener(api_connection, db_connector):
     listener = HappyHashtagsStreamListener(db_connector=db_connector, logger=logger)
     stream = tweepy.Stream(auth=api_connection.auth, listener=listener)
 
-    stream.filter(track=[':)'])
+    stream.filter(track=HAPPY_HASHTAGS)
 
 
 def get_db_connector():
