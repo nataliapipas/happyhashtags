@@ -10,27 +10,30 @@ class DbConnector:
         self.host = host
         self.port = port
         self.logger = logger
-        self.logger.info("Initializing with {} {} {} {} {}".format(user, password, database, host, port))
 
-    def writeToPostgres(self, rows: list, query: str):
+    def writeRows(self, rows: list, query: str):
+        """
+        Writes rows to the database using a query
+        :param rows:
+        :param query:
+        :return:
+        """
+        connection = self.connect()
         try:
-            connection = psycopg2.connect(user=self.user,
-                                          password=self.password,
-                                          host=self.host,
-                                          port=self.port,
-                                          database=self.database)
+            with connection.cursor() as cursor:
+                cursor.executemany(read_query(query, self.logger), rows)
+                connection.commit()
+        except Exception as e:
+            connection.rollback()
+            raise e
 
-            cursor = connection.cursor()
-
-            cursor.executemany(read_query(query, self.logger), rows)
-            connection.commit()
-            self.logger.info("Executed query")
-
-        except Exception as error:
-            self.logger.info("Error while connecting to PostgreSQL", error)
-        finally:
-            # closing database connection.
-            if connection:
-                self.logger.info("Closing PostgreSQL")
-                cursor.close()
-                connection.close()
+    def connect(self):
+        """
+        Opens a connection to the database
+        :return: The connection
+        """
+        return psycopg2.connect(user=self.user,
+                                password=self.password,
+                                host=self.host,
+                                port=self.port,
+                                database=self.database)

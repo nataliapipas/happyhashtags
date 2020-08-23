@@ -15,10 +15,10 @@ api = Api(read_variable('API_CONSUMER_KEY'), read_variable('API_CONSUMER_SECRET'
           read_variable('API_ACCESS_TOKEN_SECRET')).connection
 
 
-class MyStreamListener(tweepy.StreamListener):
+class HappyHashtagsStreamListener(tweepy.StreamListener):
 
     def __init__(self, db_connector, batch_size=10):
-        super(MyStreamListener, self).__init__()
+        super(HappyHashtagsStreamListener, self).__init__()
         self.batch_size = batch_size
         self.batch = self.get_clean_batch()
         self.db_connector = db_connector
@@ -30,7 +30,7 @@ class MyStreamListener(tweepy.StreamListener):
         if len(self.batch) > self.batch_size:
             logger.info("Batch:")
             logger.info(self.batch)
-            self.db_connector.writeToPostgres(rows=self.get_rows(), query="update_counts.sql")
+            self.db_connector.writeRows(rows=self.get_rows(), query="update_counts.sql")
             self.batch = self.get_clean_batch()
 
     def get_rows(self):
@@ -61,7 +61,7 @@ class MyStreamListener(tweepy.StreamListener):
         return defaultdict(lambda: defaultdict(int))
 
 
-myStreamListener = MyStreamListener(
+myStreamListener = HappyHashtagsStreamListener(
     DbConnector(user=read_variable('POSTGRES_USER'), password=read_variable('POSTGRES_PASSWORD'),
                 database=read_variable('POSTGRES_DB'), host=read_variable('POSTGRES_HOST'), logger=logger))
 myStream = tweepy.Stream(auth=api.auth, listener=myStreamListener)
