@@ -1,11 +1,10 @@
 import os
 
-cwd = os.getcwd()
-
 
 def read_query(query_name: str, logger):
     """
     Loads a query from the queries folder and returns it
+    :param logger: The logger object
     :param query_name: The query to be loaded
     :return:
     """
@@ -14,4 +13,13 @@ def read_query(query_name: str, logger):
         f = open('queries/{}'.format(query_name))
         return f.read()
     except Exception as e:
-        raise (e)
+        raise e
+
+
+def read_variable(name: str):
+    """
+    Reads an environment variable from the system
+    :param name: The name of the variable
+    :return:
+    """
+    return os.getenv(name)
