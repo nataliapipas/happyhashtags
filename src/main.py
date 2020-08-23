@@ -1,69 +1,48 @@
 import tweepy
-import time
-from collections import defaultdict
 import logging
-import os
 from api import Api
-from tweet import Tweet
 from os_utils import read_variable
 from db_connector import DbConnector
+from stream_listener import HappyHashtagsStreamListener
 
-logging.basicConfig(level=os.getenv('LOG_LEVEL', logging.INFO))
+logging.basicConfig(level=read_variable('LOG_LEVEL', logging.INFO))
 logger = logging.getLogger()
 
-api = Api(read_variable('API_CONSUMER_KEY'), read_variable('API_CONSUMER_SECRET'), read_variable('API_ACCESS_TOKEN'),
-          read_variable('API_ACCESS_TOKEN_SECRET')).connection
+
+def get_api_connection():
+    """
+    Reads variables to configure and create an API object
+    :return: The API connection
+    """
+    consumer_key = read_variable('API_CONSUMER_KEY')
+    consumer_secret = read_variable('API_CONSUMER_SECRET')
+    access_token = read_variable('API_ACCESS_TOKEN')
+    access_token_secret = read_variable('API_ACCESS_TOKEN_SECRET')
+    return Api(consumer_key, consumer_secret, access_token, access_token_secret).connection
 
 
-class HappyHashtagsStreamListener(tweepy.StreamListener):
+def start_stream_listener(api_connection, db_connector):
+    listener = HappyHashtagsStreamListener(db_connector=db_connector, logger=logger)
+    stream = tweepy.Stream(auth=api_connection.auth, listener=listener)
 
-    def __init__(self, db_connector, batch_size=10):
-        super(HappyHashtagsStreamListener, self).__init__()
-        self.batch_size = batch_size
-        self.batch = self.get_clean_batch()
-        self.db_connector = db_connector
-
-    def on_status(self, status):
-        tweet = Tweet(status)
-        self.update_counts(tweet)
-
-        if len(self.batch) > self.batch_size:
-            logger.info("Batch:")
-            logger.info(self.batch)
-            self.db_connector.writeRows(rows=self.get_rows(), query="update_counts.sql")
-            self.batch = self.get_clean_batch()
-
-    def get_rows(self):
-        """
-        :return: Rows for the current batch
-        """
-        for hashtag, items in self.batch.items():
-            for hour, count in items.items():
-                yield (hashtag, hour, count)
-
-    def update_counts(self, tweet):
-        """
-        Updates the counts of happy hashtags given a tweet
-        :param tweet:
-        :return:
-        """
-        for hashtag in tweet.hashtags:
-            self.batch[hashtag][tweet.created_at_hour] += 1
-
-    def on_error(self, status_code):
-        logger.info(status_code)
-        if status_code == 420:
-            logger.info("420 error: sleeping for 15 min...")
-            time.sleep(15 * 60)
-        return True
-
-    def get_clean_batch(self):
-        return defaultdict(lambda: defaultdict(int))
+    stream.filter(track=[':)'])
 
 
-myStreamListener = HappyHashtagsStreamListener(
-    DbConnector(user=read_variable('POSTGRES_USER'), password=read_variable('POSTGRES_PASSWORD'),
-                database=read_variable('POSTGRES_DB'), host=read_variable('POSTGRES_HOST'), logger=logger))
-myStream = tweepy.Stream(auth=api.auth, listener=myStreamListener)
+def get_db_connector():
+    user = read_variable('POSTGRES_USER')
+    password = read_variable('POSTGRES_PASSWORD')
+    database = read_variable('POSTGRES_DB')
+    host = read_variable('POSTGRES_HOST')
+    return DbConnector(user=user, password=password,
+                       database=database, host=host,
+                       logger=logger)
 
-myStream.filter(track=[':)'])
+
+def main():
+    api_connection = get_api_connection()
+    db_connector = get_db_connector()
+    start_stream_listener(api_connection, db_connector)
+
+
+if __name__ == "__main__":
+    main()

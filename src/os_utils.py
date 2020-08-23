@@ -16,10 +16,11 @@ def read_query(query_name: str, logger):
         raise e
 
 
-def read_variable(name: str):
+def read_variable(name: str, default=None):
     """
     Reads an environment variable from the system
+    :param default: The default value to be used in case the variable is not set
     :param name: The name of the variable
     :return:
     """
-    return os.getenv(name)
+    return os.getenv(name, default)
