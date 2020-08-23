@@ -12,7 +12,7 @@ def read_query(query_name: str, logger):
     try:
         f = open('queries/{}'.format(query_name))
         return f.read()
-    except Exception as e:
+    except FileNotFoundError as e:
         raise e
 
 
