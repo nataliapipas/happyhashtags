@@ -3,10 +3,10 @@ import time
 from collections import defaultdict
 import logging
 import os
-import psycopg2
 from api import Api
 from tweet import Tweet
-from os_utils import read_query, read_variable
+from os_utils import read_variable
+from db_connector import DbConnector
 
 logging.basicConfig(level=os.getenv('LOG_LEVEL', logging.INFO))
 logger = logging.getLogger()
@@ -17,37 +17,11 @@ api = Api(read_variable('API_CONSUMER_KEY'), read_variable('API_CONSUMER_SECRET'
 
 class MyStreamListener(tweepy.StreamListener):
 
-    def __init__(self, batch_size=10):
+    def __init__(self, db_connector, batch_size=10):
         super(MyStreamListener, self).__init__()
         self.batch_size = batch_size
         self.batch = self.get_clean_batch()
-
-    def write_to_postgres(self):
-        try:
-            connection = psycopg2.connect(user="happy",
-                                          password="hashtags",
-                                          host="postgres",
-                                          port="5432",
-                                          database="happy_hashtags")
-
-            cursor = connection.cursor()
-
-            rows = self.get_rows()
-
-            # Print PostgreSQL version
-            cursor.executemany(read_query("update_counts.sql", logger),
-                               [(hashtag, hour, count) for hashtag, hour, count in rows])
-            connection.commit()
-            logger.info("Executed query")
-
-        except Exception as error:
-            logger.info("Error while connecting to PostgreSQL", error)
-        finally:
-            # closing database connection.
-            if connection:
-                cursor.close()
-                connection.close()
-                logger.info("PostgreSQL connection is closed")
+        self.db_connector = db_connector
 
     def on_status(self, status):
         tweet = Tweet(status)
@@ -56,7 +30,7 @@ class MyStreamListener(tweepy.StreamListener):
         if len(self.batch) > self.batch_size:
             logger.info("Batch:")
             logger.info(self.batch)
-            self.write_to_postgres()
+            self.db_connector.writeToPostgres(rows=self.get_rows(), query="update_counts.sql")
             self.batch = self.get_clean_batch()
 
     def get_rows(self):
@@ -87,7 +61,9 @@ class MyStreamListener(tweepy.StreamListener):
         return defaultdict(lambda: defaultdict(int))
 
 
-myStreamListener = MyStreamListener()
+myStreamListener = MyStreamListener(
+    DbConnector(user=read_variable('POSTGRES_USER'), password=read_variable('POSTGRES_PASSWORD'),
+                database=read_variable('POSTGRES_DB'), host=read_variable('POSTGRES_HOST'), logger=logger))
 myStream = tweepy.Stream(auth=api.auth, listener=myStreamListener)
 
 myStream.filter(track=[':)'])
