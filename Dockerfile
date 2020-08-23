@@ -8,4 +8,5 @@ RUN pip install -r requirements.txt
 COPY queries ./queries
 COPY alembic ./alembic
 COPY alembic.ini alembic.ini
+COPY tests ./tests
 CMD python src/main.py

@@ -1,6 +1,7 @@
 .DOCKER_COMPOSE := docker-compose -f docker-compose-dev.yml
 
 setup: build wait-for-it migrate ## Setup project
+test: up migrate unit-tests ## Run the test suite
 
 .PHONY: build
 build:
@@ -34,3 +35,7 @@ wait-for-it:
 .PHONY: migrate
 migrate: ## Run the migrations
 	$(.DOCKER_COMPOSE) exec hh /usr/local/bin/alembic upgrade head
+
+.PHONY: unit-tests
+unit-tests:
+	$(.DOCKER_COMPOSE) run --rm --no-deps --entrypoint=pytest hh tests -vv
