@@ -5,6 +5,7 @@ import logging
 import os
 import psycopg2
 from api import Api
+from tweet import Tweet
 
 logging.basicConfig(level=os.getenv('LOG_LEVEL', logging.INFO))
 logger = logging.getLogger(__name__)
@@ -18,15 +19,7 @@ class MyStreamListener(tweepy.StreamListener):
     def __init__(self, batch_size=10):
         super(MyStreamListener, self).__init__()
         self.batch_size = batch_size
-        self.batch = defaultdict(lambda: defaultdict(int))
-
-    def get_hour(self, tweet_datetime):
-        """
-        Truncates the minutes and seconds attributes from a datetime object.
-        :param tweet_datetime: The datetime to be truncated
-        :return:
-        """
-        return str(tweet_datetime)[:13] + ":00:00"
+        self.batch = self.get_clean_batch()
 
     def write_to_postgres(self, data):
         try:
@@ -53,7 +46,7 @@ values (%s,%s,%s)
 on conflict (hashtag, hour)
 do
     update set count = EXCLUDED.count + hourly_counts.count;
-""", [(hashtag, self.get_hour(hour), count) for hashtag, hour, count in rows])
+""", [(hashtag, hour, count) for hashtag, hour, count in rows])
             connection.commit()
             logger.info("Executed query")
 
@@ -68,19 +61,15 @@ do
 
     def on_status(self, status):
         # check if text has been truncated
-        if hasattr(status, "extended_tweet"):
-            text = status.extended_tweet["full_text"]
-        else:
-            text = status.text
-        hashtags = [word for word in text.split() if word[0] == '#']
-        for hashtag in hashtags:
-            self.batch[hashtag][status.created_at] += 1
+        tweet = Tweet(status)
+        for hashtag in tweet.hashtags:
+            self.batch[hashtag][tweet.created_at_hour] += 1
 
         if len(self.batch) > self.batch_size:
             logger.info("Batch:")
             logger.info(self.batch)
             self.write_to_postgres(self.batch)
-            self.batch = defaultdict(lambda: defaultdict(int))
+            self.batch = self.get_clean_batch()
 
     def on_error(self, status_code):
         logger.info(status_code)
@@ -88,6 +77,9 @@ do
             logger.info("420 error: sleeping for 15 min...")
             time.sleep(15 * 60)
         return True
+
+    def get_clean_batch(self):
+        return defaultdict(lambda: defaultdict(int))
 
 
 myStreamListener = MyStreamListener()
