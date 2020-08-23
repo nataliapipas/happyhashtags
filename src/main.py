@@ -6,9 +6,10 @@ import os
 import psycopg2
 from api import Api
 from tweet import Tweet
+from os_utils import read_query
 
 logging.basicConfig(level=os.getenv('LOG_LEVEL', logging.INFO))
-logger = logging.getLogger(__name__)
+logger = logging.getLogger()
 
 api = Api(os.getenv('API_CONSUMER_KEY'), os.getenv('API_CONSUMER_SECRET'), os.getenv('API_ACCESS_TOKEN'),
           os.getenv('API_ACCESS_TOKEN_SECRET')).connection
@@ -40,13 +41,7 @@ class MyStreamListener(tweepy.StreamListener):
             logger.info(rows)
 
             # Print PostgreSQL version
-            cursor.executemany("""
-            insert into hourly_counts (hashtag, hour, count)
-values (%s,%s,%s)
-on conflict (hashtag, hour)
-do
-    update set count = EXCLUDED.count + hourly_counts.count;
-""", [(hashtag, hour, count) for hashtag, hour, count in rows])
+            cursor.executemany(read_query("update_counts.sql", logger), [(hashtag, hour, count) for hashtag, hour, count in rows])
             connection.commit()
             logger.info("Executed query")
 
