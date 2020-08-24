@@ -24,3 +24,12 @@ def read_variable(name: str, default=None):
     :return:
     """
     return os.getenv(name, default)
+
+
+def read_variables(*names):
+    """
+    Reads environment variables from the system
+    :param names: The list with variable names
+    :return:
+    """
+    return [os.getenv(name) for name in names]

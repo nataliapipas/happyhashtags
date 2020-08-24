@@ -3,6 +3,7 @@ from tweet import Tweet
 import time
 from collections import defaultdict
 
+
 def get_clean_batch():
     return defaultdict(lambda: defaultdict(int))
 
@@ -26,8 +27,6 @@ class HappyHashtagsStreamListener(tweepy.StreamListener):
         self.update_counts(tweet)
 
         if len(self.batch) > self.batch_size:
-            self.logger.info("Batch:")
-            self.logger.info(self.batch)
             self.db_connector.writeRows(rows=self.get_rows(), query="update_counts.sql")
             self.batch = get_clean_batch()
 
@@ -59,4 +58,3 @@ class HappyHashtagsStreamListener(tweepy.StreamListener):
             self.logger.info("420 error: sleeping for 15 min...")
             time.sleep(15 * 60)
         return True
-
