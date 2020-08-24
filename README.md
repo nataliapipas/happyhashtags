@@ -2,7 +2,7 @@
 
 ## Intro
 
-The goal of this project is to "happy hashtags" from the Twitter API by processing a stream of tweets.
+The goal of this project is to help finding the "happiest hashtag(s)" from the Twitter by processing a stream of tweets provided by their API.
 
 A hashtag is considered "happy" if it belongs to a tweet that contains the emoji `:)` or any list of emojis that is configured.
 
