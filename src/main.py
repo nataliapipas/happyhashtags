@@ -23,13 +23,6 @@ def get_api_connection():
     return Api(consumer_key, consumer_secret, access_token, access_token_secret).connection
 
 
-def start_stream_listener(api_connection, db_connector):
-    listener = HappyHashtagsStreamListener(db_connector=db_connector, logger=logger)
-    stream = tweepy.Stream(auth=api_connection.auth, listener=listener)
-
-    stream.filter(track=HAPPY_HASHTAGS)
-
-
 def get_db_connector():
     user = read_variable('POSTGRES_USER')
     password = read_variable('POSTGRES_PASSWORD')
@@ -40,10 +33,20 @@ def get_db_connector():
                        logger=logger)
 
 
+def get_stream_listener(db_connector):
+    return HappyHashtagsStreamListener(db_connector=db_connector, logger=logger)
+
+
+def start_stream(api_connection, listener):
+    stream = tweepy.Stream(auth=api_connection.auth, listener=listener)
+    stream.filter(track=HAPPY_HASHTAGS)
+
+
 def main():
     api_connection = get_api_connection()
     db_connector = get_db_connector()
-    start_stream_listener(api_connection, db_connector)
+    stream_listener = get_stream_listener(db_connector)
+    start_stream(api_connection, stream_listener)
 
 
 if __name__ == "__main__":
