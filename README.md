@@ -17,6 +17,7 @@ The data flows from the Twitter API, is aggregated by the application and is the
 To start the application:
 
 - Make sure you have [Docker](http://docker.com/) installed
+- Make sure you have configured the `API_*` environment variables on `docker-compose-dev.yml`
 - Run `make setup` (only needed if it was not initialized before)
 - Run `make up`
 

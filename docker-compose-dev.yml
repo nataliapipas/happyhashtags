@@ -1,0 +1,37 @@
+version: '3'
+services:
+  hh:
+    build: .
+    environment:
+      - POSTGRES_USER=happy
+      - POSTGRES_PASSWORD=hashtags
+      - POSTGRES_DB=happy_hashtags
+      - POSTGRES_HOST=postgres
+      - API_CONSUMER_KEY=xxx
+      - API_CONSUMER_SECRET=xxx
+      - API_ACCESS_TOKEN=xxx
+      - API_ACCESS_TOKEN_SECRET=xxx
+      - PYTHONPATH=src/
+    volumes:
+      - ./src:/app/src
+      - ./tests:/app/tests
+
+    depends_on:
+      - postgres
+
+  postgres:
+    image: postgres:13-alpine
+    restart: always
+    volumes:
+      - twitter:/var/lib/postgresql/hh/data:rw
+    environment:
+      POSTGRES_DB: happy_hashtags
+      POSTGRES_USER: happy
+      POSTGRES_PASSWORD: hashtags
+      PGDATA: /var/lib/postgresql/hh/data/db-files/
+    ports:
+      - "5432:5432"
+
+volumes:
+  twitter:
+
