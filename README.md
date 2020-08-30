@@ -45,6 +45,27 @@ For example, I used a python library called `plotly` to query the database and g
 
 As the application is dockerized, deploying it to a cloud service (like [ECS](https://aws.amazon.com/ecs/)) should not be a major challenge. The database can also be replaced by a cloud alternative (like [RDS](https://aws.amazon.com/rds/)).
 
+If you would choose to go with the ECS/ECR and RDS approach, the high-level steps would look like this:
+
+- Build the docker image
+   - `docker build -t happyhashtags .`
+- Tag it 
+   - `docker tag happyhashtags:latest <your-aws-identifier>.dkr.ecr.<region>.amazonaws.com/happyhashtags:latest`
+-  Push it to ECR
+   - `docker push <your-aws-identifier>.dkr.ecr.<region>.amazonaws.com/happyhashtags:latest` 
+- Create an RDS instance
+   - Make sure you use the same VPC for both RDS and the ECS cluster or allow the communication in your preferred way
+- Create an ECS cluster
+- Create an ECS task definition
+   - Configure the container to add the needed environment variables (you can find them on the docker compose file)
+   - Configure the VPC, security groups, health checks, etc.
+- Run your task
+
+Notes:
+- You can find a more complete documentation [here](https://aws.amazon.com/getting-started/hands-on/deploy-docker-containers/)
+- For a production environment, it's better to use infrastructure as code with a solution like [Terraform](https://www.terraform.io/) or [Cloud Formation](https://aws.amazon.com/cloudformation/).
+- This application was never actually deployed, so be careful with following these instructions :)
+
 ## Tests
 
 To execute the tests, run `make test`.
